@@ -17,17 +17,25 @@ export default function Update({ params }) {
     project_type: "Condo",
     description: "",
     project_address: "",
-    builder_sales_email: "",
     builder_sales_phone: "",
+    builder_sales_email: "",
     co_op_available: false,
-    occupancy: "",
-    status: "",
+    status: "Upcoming",
     developer: {
       name: "",
     },
     city: {
       name: "",
     },
+  };
+
+  let developer_stat = {
+    id: 1,
+    name: "",
+    phone: "",
+    website_link: "",
+    details: "",
+    image: null,
   };
 
   const routee = useRouter();
@@ -37,6 +45,54 @@ export default function Update({ params }) {
   const [refetch, setRefetch] = useState(true);
   const [uploadplans, setUploadPlans] = useState([]);
   const [uploadimages, setUploadImages] = useState([]);
+  const [developerdata, setDeveloperData] = useState(developer_stat);
+  const [modaldeveloper, setModalDeveloper] = useState(false);
+
+  const handleCreateDeveloper = (e) => {
+    e.preventDefault();
+    console.log(developerdata);
+    if (
+      developerdata.name == "" ||
+      developerdata.phone == "" ||
+      developerdata.website_link == "" ||
+      developerdata.details == "" ||
+      developerdata.image == null
+    ) {
+      swal({
+        title: "Error!",
+        text: "Please fill all the fields!",
+        icon: "error",
+        button: "Ok",
+      });
+      return;
+    }
+    axios
+      .post("https://portal.condomonk.ca/api/developers/", developerdata, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      })
+      .then((res) => {
+        setRefetch(!refetch);
+        setDeveloperData(stat);
+        setModalDeveloper(false);
+      })
+      .catch((err) => {
+        console.log(err.data);
+      });
+  };
+  const handleChangeDeveloperData = (e) => {
+    const { id, value } = e.target;
+    setDeveloperData((prevState) => ({
+      ...prevState,
+      [id]: value,
+    }));
+  };
+  const handleImageChange = (e) => {
+    let newData = { ...developerdata };
+    newData["image"] = e.target.files[0];
+    setDeveloperData(newData);
+  };
 
   const handleImagesChange = (e) => {
     const prevImages = uploadimages;
@@ -52,7 +108,7 @@ export default function Update({ params }) {
 
   useEffect(() => {
     axios
-      .get("https://api.condomonk.ca/api/city/")
+      .get("https://portal.condomonk.ca/api/city/")
       .then((res) => {
         console.log(res.data.results);
         setCities(res.data.results);
@@ -66,7 +122,7 @@ export default function Update({ params }) {
       });
 
     axios
-      .get("https://api.condomonk.ca/api/developers/")
+      .get("https://portal.condomonk.ca/api/developers/")
       .then((res) => {
         console.log(res.data.results);
         setDevelopers(res.data.results);
@@ -76,7 +132,9 @@ export default function Update({ params }) {
       });
 
     axios
-      .get("https://api.condomonk.ca/api/preconstructions/" + params.id + "/")
+      .get(
+        "https://portal.condomonk.ca/api/preconstructions/" + params.id + "/"
+      )
       .then((res) => {
         setPredata(res.data);
       })
@@ -133,8 +191,8 @@ export default function Update({ params }) {
       predata.status === "" ||
       predata.city.name === "" ||
       predata.developer.name === "" ||
-      predata.builder_sales_email === "" ||
-      predata.builder_sales_phone === ""
+      predata.builder_sales_phone === "" ||
+      predata.builder_sales_email === ""
     ) {
       swal("Please fill all the fields", "", "error");
       return;
@@ -148,7 +206,7 @@ export default function Update({ params }) {
 
     axios
       .put(
-        `https://api.condomonk.ca/api/preconstructions/${predata.id}/`,
+        `https://portal.condomonk.ca/api/preconstructions/${predata.id}/`,
         alldata,
         {
           headers: {
@@ -179,8 +237,183 @@ export default function Update({ params }) {
     setUploadImages(newimages);
   };
 
+  const handleDeleteUploadedImage = (image) => {
+    swal({
+      title: "Are you sure?",
+      text: "Once deleted, you will not be able to recover this image!",
+      icon: "warning",
+      buttons: true,
+      dangerMode: true,
+    }).then((willDelete) => {
+      if (willDelete) {
+        axios
+          .delete(`https://portal.condomonk.ca/api/delete-image/${image.id}/`)
+          .then((res) => {
+            console.log(res.data);
+            setRefetch(!refetch);
+            swal("Image Deleted Successfully", "", "success");
+          })
+          .catch((err) => {
+            console.log(err.data);
+            swal("Something went wrong", "", "error");
+          });
+      } else {
+        swal({
+          title: "Cancelled!",
+          text: "Your image is safe!",
+          icon: "error",
+          timer: 1000,
+          buttons: false,
+        });
+      }
+    });
+  };
+
+  const handleDeleteUploadedPlan = (plan) => {
+    swal({
+      title: "Are you sure?",
+      text: "Once deleted, you will not be able to recover this plan!",
+      icon: "warning",
+      buttons: true,
+      dangerMode: true,
+    }).then((willDelete) => {
+      if (willDelete) {
+        axios
+          .delete(
+            `https://portal.condomonk.ca/api/delete-floorplan/${plan.id}/`
+          )
+          .then((res) => {
+            console.log(res.data);
+            setRefetch(!refetch);
+            swal("Plan Deleted Successfully", "", "success");
+          })
+          .catch((err) => {
+            console.log(err.data);
+            swal("Something went wrong", "", "error");
+          });
+      } else {
+        swal({
+          title: "Cancelled!",
+          text: "Your plan is safe!",
+          icon: "error",
+          timer: 1000,
+          buttons: false,
+        });
+      }
+    });
+  };
+
   return (
     <>
+      {modaldeveloper && (
+        <div className="modal">
+          <section className="modal-main rounded-4">
+            <div className="p-3 py-4 bg-light">
+              <div className="d-flex justify-content-between align-items-center">
+                <p className="fw-bold mb-0">Upload Developer</p>
+                <button
+                  className="btn bg-white btn-outline-danger p-1 py-0"
+                  onClick={() => {
+                    setModalDeveloper(false);
+                    setDeveloperData(stat);
+                  }}
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="16"
+                    height="16"
+                    fill="#ff0000"
+                    className="bi bi-x"
+                    viewBox="0 0 16 16"
+                  >
+                    <path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z" />
+                  </svg>
+                </button>
+              </div>
+              <div className="py-3 mt-2">
+                <div className="row row-cols-1 gy-4">
+                  <div className="col-4">
+                    <div className="form-floating w-100">
+                      <input
+                        type="text"
+                        className="form-control"
+                        id="name"
+                        value={developerdata.name}
+                        onChange={(e) => handleChangeDeveloperData(e)}
+                      />
+                      <label htmlFor="name">
+                        Developer Name <span className="text-danger">*</span>
+                      </label>
+                    </div>
+                  </div>
+                  <div className="col-4">
+                    <div className="form-floating w-100">
+                      <input
+                        type="text"
+                        className="form-control"
+                        id="phone"
+                        value={developerdata.phone}
+                        onChange={(e) => handleChangeDeveloperData(e)}
+                      />
+                      <label htmlFor="phone">
+                        Phone <span className="text-danger">*</span>
+                      </label>
+                    </div>
+                  </div>
+                  <div className="col-4">
+                    <div className="form-floating w-100">
+                      <input
+                        type="text"
+                        className="form-control"
+                        id="website_link"
+                        value={developerdata.website_link}
+                        onChange={(e) => handleChangeDeveloperData(e)}
+                      />
+                      <label htmlFor="website_link">
+                        Website Link <span className="text-danger">*</span>
+                      </label>
+                    </div>
+                  </div>
+                  <div className="col-4">
+                    <div className="w-100">
+                      <label htmlFor="image">
+                        Logo / Banner <span className="text-danger">*</span>
+                      </label>
+                      <input
+                        type="file"
+                        className="form-control"
+                        id="image"
+                        onChange={(e) => {
+                          handleImageChange(e);
+                        }}
+                      />
+                    </div>
+                  </div>
+                  <div className="col-12">
+                    <p className="fw-bold mb-1 mt-2">
+                      About <span className="text-danger">*</span>{" "}
+                    </p>
+                    <textarea
+                      name="details"
+                      id="details"
+                      rows={8}
+                      className="textbox w-100"
+                      defaultValue={developerdata.details}
+                      onChange={(e) => handleChangeDeveloperData(e)}
+                    ></textarea>
+                  </div>
+                </div>
+              </div>
+              <button
+                className="btn btn-success mt-5 d-flex justify-content-center w-100 btn-lg"
+                onClick={(e) => handleCreateDeveloper(e)}
+              >
+                Submit
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
       <div className="bg-white">
         <div className="container-fluid px-minn">
           <div className="d-flex justify-content-between pt-5">
@@ -315,13 +548,12 @@ export default function Update({ params }) {
                       type="text"
                       className="form-control"
                       min="0"
-                      id="builder_sales_email"
-                      value={predata.builder_sales_email}
+                      id="builder_sales_phone"
+                      value={predata.builder_sales_phone}
                       onChange={(e) => handleChange(e)}
                     />
-                    <label htmlFor="builder_sales_email">
-                      Builders Sales Email{" "}
-                      <span className="text-danger">*</span>
+                    <label htmlFor="builder_sales_phone">
+                      Builder Sales Phone <span className="text-danger">*</span>
                     </label>
                   </div>
                 </div>
@@ -331,13 +563,12 @@ export default function Update({ params }) {
                       type="text"
                       className="form-control"
                       min="0"
-                      id="builder_sales_phone"
-                      value={predata.builder_sales_phone}
+                      id="builder_sales_email"
+                      value={predata.builder_sales_email}
                       onChange={(e) => handleChange(e)}
                     />
-                    <label htmlFor="builder_sales_phone">
-                      Builders Sales Phone{" "}
-                      <span className="text-danger">*</span>
+                    <label htmlFor="builder_sales_email">
+                      Builder Sales Email <span className="text-danger">*</span>
                     </label>
                   </div>
                 </div>
@@ -346,6 +577,7 @@ export default function Update({ params }) {
                     <select
                       className="form-select"
                       id="city"
+                      value={predata.city.name}
                       onChange={(e) => handleChangeCity(e)}
                       aria-label="Floating label select example"
                     >
@@ -359,20 +591,21 @@ export default function Update({ params }) {
                       Select City <span className="text-danger">*</span>
                     </label>
                   </div>
-                  <div className="col-12">
+                  {/* <div className="col-12">
                     <button
                       className="btn btn-outline-dark mt-2 w-100"
                       onClick={() => setModalstat(true)}
                     >
                       Add New City
                     </button>
-                  </div>
+                  </div> */}
                 </div>
                 <div className="col-4">
                   <div className="form-floating w-100">
                     <select
                       className="form-select"
                       id="developer"
+                      value={predata.developer.name}
                       onChange={(e) => handleChangeDev(e)}
                       aria-label="Floating label select example"
                     >
@@ -390,7 +623,7 @@ export default function Update({ params }) {
                   <div className="col-12">
                     <button
                       className="btn btn-outline-dark mt-2 w-100"
-                      onClick={() => setModalstat(true)}
+                      onClick={() => setModalDeveloper(true)}
                     >
                       Add New Developer
                     </button>
@@ -403,7 +636,8 @@ export default function Update({ params }) {
         <div className="container-fluid px-minn pb-5 mydetaill">
           <p className="fs-5 fw-bold">Enter Description about the Project</p>
           <p className="my-3">
-            The most anticipated preconstruction project in CITY NAME ...
+            The most anticipated preconstruction project in CITY NAME ... [
+            Summary, Descriptions, Deposite Structure, Amenities ]
           </p>
           <ReactQuill
             theme="snow"
@@ -449,10 +683,46 @@ export default function Update({ params }) {
             }
           />
           <div className="row row-cols-2 pt-4 pb-3">
+            <div className="col-6 pb-3">
+              <h5 className="fw-bold">Uploaded Images</h5>
+              <div className="row row-cols-3">
+                {predata.image &&
+                  predata.image.map((image) => (
+                    <div className="col-4">
+                      <img src={image.image} className="img-fluid" />
+                      <button
+                        className="btn btn-sm btn-danger mt-2"
+                        onClick={() => handleDeleteUploadedImage(image)}
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  ))}
+              </div>
+            </div>
+            <div className="col-6 pb-3">
+              <h5 className="fw-bold">Uploaded Plans</h5>
+              <div className="row row-cols-3">
+                {predata.floorplan &&
+                  predata.floorplan.map((plan) => (
+                    <div className="col-4">
+                      <img src={plan.floorplan} className="img-fluid" />
+                      <button
+                        className="btn btn-sm btn-danger mt-2"
+                        onClick={() => handleDeleteUploadedPlan(plan)}
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  ))}
+              </div>
+            </div>
+          </div>
+          <div className="row row-cols-2 pt-4 pb-3">
             <div className="col shadow-lg">
               <div className="py-3">
                 <label htmlFor="images" className="fw-bold">
-                  Upload Photos
+                  Upload New Photos
                 </label>
                 <br />
                 <br />
@@ -488,7 +758,7 @@ export default function Update({ params }) {
             <div className="col shadow-lg">
               <div className="py-3">
                 <label htmlFor="plans" className="fw-bold">
-                  Upload Plans
+                  Upload New Plans
                 </label>
                 <br />
                 <br />
